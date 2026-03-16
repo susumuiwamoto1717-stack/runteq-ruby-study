@@ -1,0 +1,18 @@
+{
+  "name": "Ruby学習アプリ",
+  "short_name": "Ruby学習",
+  "description": "RUNTEQカリキュラム対応 Ruby学習アプリ",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#CC342D",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%23CC342D'/><text x='256' y='340' font-size='280' text-anchor='middle' fill='white' font-family='system-ui' font-weight='bold'>R</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

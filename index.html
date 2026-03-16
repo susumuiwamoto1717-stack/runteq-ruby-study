@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#CC342D">
+<link rel="manifest" href="manifest.json">
+<title>Ruby学習アプリ</title>
+<style>
+:root {
+  --ruby: #CC342D;
+  --ruby-dark: #9B2823;
+  --ruby-light: #E8564F;
+  --bg: #0f0f1a;
+  --bg2: #1a1a2e;
+  --bg3: #25253d;
+  --card: #1e1e35;
+  --card-hover: #252545;
+  --text: #e8e8f0;
+  --text2: #a0a0b8;
+  --text3: #6a6a82;
+  --green: #34C759;
+  --orange: #FF9500;
+  --blue: #007AFF;
+  --safe-top: env(safe-area-inset-top, 20px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --tab-h: calc(56px + var(--safe-bottom));
+  --radius: 14px;
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100%;
+  overflow: hidden;
+  line-height: 1.7;
+  font-size: 15px;
+}
+body { padding-top: var(--safe-top); }
+
+/* === Tab Bar === */
+.tab-bar {
+  position: fixed; bottom:0; left:0; right:0;
+  height: var(--tab-h);
+  background: rgba(20,20,40,0.92);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  display: flex; justify-content: space-around; align-items: flex-start;
+  padding-top: 8px;
+  padding-bottom: var(--safe-bottom);
+  border-top: 0.5px solid rgba(255,255,255,0.08);
+  z-index: 100;
+}
+.tab-btn {
+  background: none; border: none; color: var(--text3);
+  font-size: 10px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 4px 16px; cursor: pointer; transition: color 0.2s;
+}
+.tab-btn.active { color: var(--ruby-light); }
+.tab-btn svg { width: 24px; height: 24px; }
+
+/* === Pages === */
+.page {
+  position: absolute; top: 0; left: 0; right: 0;
+  bottom: var(--tab-h);
+  padding-top: var(--safe-top);
+  overflow-y: auto; overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  transform: translateY(12px);
+}
+.page.active { opacity:1; pointer-events:auto; transform:translateY(0); }
+
+.page-inner { padding: 16px 16px calc(16px + var(--safe-bottom)); max-width: 420px; margin: 0 auto; }
+
+/* === Header === */
+.page-header {
+  font-size: 28px; font-weight: 800; letter-spacing: -0.5px;
+  margin-bottom: 20px; padding-top: 8px;
+}
+.page-header small { font-size: 13px; color: var(--text2); font-weight: 400; display: block; margin-top: 2px; }
+
+/* === Cards === */
+.chapter-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  position: relative; overflow: hidden;
+}
+.chapter-card:active { transform: scale(0.98); background: var(--card-hover); }
+.chapter-card .ch-num {
+  font-size: 11px; font-weight: 700; color: var(--ruby-light);
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;
+}
+.chapter-card .ch-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+.chapter-card .ch-essence { font-size: 13px; color: var(--text2); line-height: 1.5; }
+.chapter-card .ch-progress {
+  position: absolute; top: 16px; right: 16px;
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 2px solid var(--bg3); display: flex; align-items: center; justify-content: center;
+}
+.chapter-card .ch-progress.done { border-color: var(--green); background: rgba(52,199,89,0.15); }
+.chapter-card .ch-progress.done::after { content:'✓'; color: var(--green); font-size: 14px; font-weight: 700; }
+
+/* === Detail View === */
+.detail-overlay {
+  position: fixed; top:0; left:0; right:0; bottom:0;
+  background: var(--bg);
+  z-index: 200;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  transform: translateY(100%);
+  padding-top: var(--safe-top);
+}
+.detail-overlay.open { opacity:1; pointer-events:auto; transform:translateY(0); }
+.detail-inner { padding: 16px; max-width: 420px; margin: 0 auto; padding-bottom: calc(80px + var(--safe-bottom)); }
+.detail-back {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: none; border: none; color: var(--ruby-light);
+  font-size: 15px; padding: 8px 0; cursor: pointer; margin-bottom: 12px;
+}
+.detail-ch-num { font-size: 12px; color: var(--ruby-light); font-weight: 700; letter-spacing: 1px; }
+.detail-title { font-size: 24px; font-weight: 800; margin: 4px 0 16px; }
+.detail-section { margin-bottom: 24px; }
+.detail-section h3 {
+  font-size: 13px; font-weight: 700; color: var(--ruby-light);
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
+}
+.detail-section h3::before {
+  content: ''; width: 3px; height: 14px; background: var(--ruby); border-radius: 2px;
+}
+.detail-section .content-card {
+  background: var(--card); border-radius: 12px; padding: 14px 16px;
+}
+.content-card p { margin-bottom: 8px; color: var(--text2); font-size: 14px; }
+.content-card p:last-child { margin-bottom: 0; }
+.content-card code {
+  background: rgba(204,52,45,0.12); color: var(--ruby-light);
+  padding: 2px 6px; border-radius: 4px; font-size: 13px;
+  font-family: 'SF Mono', Menlo, monospace;
+}
+.content-card pre {
+  background: var(--bg); border-radius: 8px; padding: 12px;
+  overflow-x: auto; margin: 8px 0; font-size: 13px; line-height: 1.5;
+  font-family: 'SF Mono', Menlo, monospace; color: var(--text2);
+}
+.key-list { list-style: none; }
+.key-list li {
+  padding: 8px 0; border-bottom: 0.5px solid rgba(255,255,255,0.05);
+  font-size: 14px; color: var(--text2);
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.key-list li:last-child { border-bottom: none; }
+.key-list li::before { content: '▸'; color: var(--ruby-light); flex-shrink: 0; margin-top: 1px; }
+
+.detail-read-btn {
+  display: block; width: 100%; padding: 14px;
+  background: var(--ruby); color: #fff; border: none; border-radius: 12px;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+  transition: background 0.15s;
+}
+.detail-read-btn:active { background: var(--ruby-dark); }
+.detail-read-btn.read { background: var(--bg3); color: var(--text2); }
+
+/* Memo area in detail */
+.memo-area { margin-top: 16px; }
+.memo-area textarea {
+  width: 100%; min-height: 100px; background: var(--bg);
+  border: 1px solid var(--bg3); border-radius: 10px;
+  color: var(--text); padding: 12px; font-size: 14px; resize: vertical;
+  font-family: inherit; line-height: 1.6;
+}
+.memo-area textarea:focus { outline: none; border-color: var(--ruby); }
+.memo-area label { font-size: 13px; color: var(--text2); display: block; margin-bottom: 6px; }
+.memo-saved { font-size: 11px; color: var(--green); margin-top: 4px; opacity: 0; transition: opacity 0.3s; }
+.memo-saved.show { opacity: 1; }
+
+/* === Quiz === */
+.quiz-start-card {
+  background: linear-gradient(135deg, var(--ruby-dark), var(--ruby));
+  border-radius: var(--radius); padding: 24px; text-align: center; margin-bottom: 16px;
+}
+.quiz-start-card h2 { font-size: 20px; margin-bottom: 8px; }
+.quiz-start-card p { font-size: 14px; opacity: 0.85; margin-bottom: 16px; }
+.quiz-start-btn {
+  background: #fff; color: var(--ruby); border: none;
+  padding: 12px 32px; border-radius: 24px; font-size: 16px; font-weight: 700;
+  cursor: pointer;
+}
+.quiz-start-btn:active { opacity: 0.8; }
+
+.quiz-progress-bar {
+  height: 4px; background: var(--bg3); border-radius: 2px; margin-bottom: 20px; overflow: hidden;
+}
+.quiz-progress-fill { height: 100%; background: var(--ruby); border-radius: 2px; transition: width 0.4s; }
+
+.quiz-counter { font-size: 13px; color: var(--text2); margin-bottom: 12px; }
+.quiz-question {
+  font-size: 16px; font-weight: 600; margin-bottom: 16px; line-height: 1.6;
+}
+.quiz-question pre {
+  background: var(--bg); border-radius: 8px; padding: 12px; margin: 10px 0;
+  font-size: 13px; overflow-x: auto; font-family: 'SF Mono', Menlo, monospace;
+  color: var(--text2); line-height: 1.5;
+}
+.quiz-choices { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.quiz-choice {
+  background: var(--card); border: 1.5px solid var(--bg3);
+  border-radius: 12px; padding: 14px 16px; font-size: 14px;
+  cursor: pointer; transition: all 0.15s; text-align: left;
+  color: var(--text);
+}
+.quiz-choice:active { transform: scale(0.98); }
+.quiz-choice.selected { border-color: var(--blue); background: rgba(0,122,255,0.1); }
+.quiz-choice.correct { border-color: var(--green); background: rgba(52,199,89,0.12); color: var(--green); }
+.quiz-choice.wrong { border-color: #FF3B30; background: rgba(255,59,48,0.1); color: #FF3B30; }
+.quiz-choice code {
+  background: rgba(204,52,45,0.12); color: var(--ruby-light);
+  padding: 1px 5px; border-radius: 3px; font-size: 13px;
+  font-family: 'SF Mono', Menlo, monospace;
+}
+
+.quiz-explanation {
+  background: var(--card); border-radius: 12px; padding: 14px 16px;
+  margin-bottom: 16px; font-size: 14px; color: var(--text2); line-height: 1.6;
+  border-left: 3px solid var(--blue);
+}
+.quiz-next-btn {
+  width: 100%; padding: 14px; background: var(--ruby); color: #fff;
+  border: none; border-radius: 12px; font-size: 16px; font-weight: 700;
+  cursor: pointer;
+}
+.quiz-next-btn:active { background: var(--ruby-dark); }
+
+.quiz-result {
+  text-align: center; padding: 32px 0;
+}
+.quiz-result .score-circle {
+  width: 140px; height: 140px; border-radius: 50%;
+  border: 6px solid var(--ruby); display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px; flex-direction: column;
+}
+.quiz-result .score-num { font-size: 40px; font-weight: 800; }
+.quiz-result .score-label { font-size: 13px; color: var(--text2); }
+.quiz-result .score-msg { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+.quiz-result .score-sub { font-size: 14px; color: var(--text2); margin-bottom: 24px; }
+.quiz-chapter-scores { text-align: left; margin-top: 20px; }
+.quiz-chapter-scores .ch-score-row {
+  display: flex; justify-content: space-between; padding: 8px 0;
+  border-bottom: 0.5px solid rgba(255,255,255,0.05); font-size: 14px;
+}
+
+/* === Memo list === */
+.memo-card {
+  background: var(--card); border-radius: var(--radius);
+  padding: 14px 16px; margin-bottom: 12px;
+}
+.memo-card .memo-ch { font-size: 12px; color: var(--ruby-light); font-weight: 700; margin-bottom: 4px; }
+.memo-card .memo-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+.memo-card .memo-text { font-size: 14px; color: var(--text2); white-space: pre-wrap; line-height: 1.6; }
+.memo-empty { text-align: center; padding: 40px 0; color: var(--text3); font-size: 14px; }
+
+/* === Image Zoom Modal === */
+.img-zoom-modal {
+  position: fixed; top:0; left:0; right:0; bottom:0;
+  background: rgba(0,0,0,0.95); z-index: 500;
+  display: none; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.img-zoom-modal.show { display: flex; }
+.img-zoom-modal img { max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 8px; }
+.img-zoom-close {
+  position: absolute; top: calc(var(--safe-top) + 12px); right: 16px;
+  background: rgba(255,255,255,0.15); border: none; color: #fff;
+  width: 36px; height: 36px; border-radius: 50%; font-size: 20px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+
+/* scrollbar */
+::-webkit-scrollbar { width: 0; }
+</style>
+</head>
+<body>
+
+<!-- Tab Bar -->
+<nav class="tab-bar">
+  <button class="tab-btn active" data-tab="home" onclick="switchTab('home')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9"/><path d="M5 10v10a1 1 0 001 1h3v-6h6v6h3a1 1 0 001-1V10"/></svg>
+    ホーム
+  </button>
+  <button class="tab-btn" data-tab="quiz" onclick="switchTab('quiz')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9 9a3 3 0 015.12 1c0 2-3 2-3 4"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>
+    クイズ
+  </button>
+  <button class="tab-btn" data-tab="memo" onclick="switchTab('memo')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg>
+    メモ
+  </button>
+</nav>
+
+<!-- Home Page -->
+<div class="page active" id="page-home">
+  <div class="page-inner">
+    <div class="page-header">Ruby学習<small>RUNTEQ カリキュラム 全11章</small></div>
+    <div id="chapter-list"></div>
+  </div>
+</div>
+
+<!-- Quiz Page -->
+<div class="page" id="page-quiz">
+  <div class="page-inner" id="quiz-container"></div>
+</div>
+
+<!-- Memo Page -->
+<div class="page" id="page-memo">
+  <div class="page-inner">
+    <div class="page-header">メモ一覧<small>各章で書いたメモをまとめて確認</small></div>
+    <div id="memo-list"></div>
+  </div>
+</div>
+
+<!-- Chapter Detail Overlay -->
+<div class="detail-overlay" id="detail-overlay">
+  <div class="detail-inner" id="detail-content"></div>
+</div>
+
+<!-- Image Zoom Modal -->
+<div class="img-zoom-modal" id="img-zoom-modal" onclick="closeImgZoom()">
+  <button class="img-zoom-close" onclick="closeImgZoom()">✕</button>
+  <img id="img-zoom-target" src="" alt="">
+</div>
+
+<script>
+// ===== DATA =====
+const chapters = [
+  {
+    id: 1, title: '環境構築（Docker）',
+    essence: '"同じ箱の中で動かす" — Dockerで再現性ある環境を作る',
+    essenceDetail: 'Dockerは「自分のPC環境に左右されず、全員同じ環境でプログラムを動かす」ための仕組みです。コンテナという軽量な仮想環境の中にRubyの実行環境をまるごとパッケージングします。',
+    points: [
+      '<code>Dockerfile</code> — コンテナの設計図。どのOS・言語・ライブラリを使うか定義',
+      '<code>compose.yml</code> — 複数コンテナの構成をまとめて定義するファイル',
+      'コンテナ vs ホスト — コンテナは隔離された実行環境、ホストは自分のPC',
+      'Rubyの3つの実行方法: <code>ruby -e "puts 1"</code>（ワンライナー）、<code>irb</code>（対話型）、<code>ruby file.rb</code>（ファイル実行）',
+      '<code>puts</code>（改行あり表示）vs <code>print</code>（改行なし表示）vs <code>p</code>（デバッグ用、型が分かる表示）'
+    ],
+    aiTip: 'Dockerfileの書き方に迷ったら「Ruby 3.x のDockerfileを書いて」とAIに聞いてみよう。エラーメッセージもそのまま貼ると解決が早い。'
+  },
+  {
+    id: 2, title: 'プログラムの基礎（変数・型・演算子）',
+    essence: 'データには型がある。"7" + "3" = "73"（文字列結合）、7 + 3 = 10（足し算）',
+    essenceDetail: 'プログラミングの最も基本的な概念は「データには型がある」ということ。同じ + 演算子でも、数値同士なら足し算、文字列同士なら結合になります。この違いを理解することがすべての始まりです。',
+    points: [
+      '動的型付け — Rubyは変数宣言時に型を指定しない。代入された値で型が決まる',
+      '命名規則: <code>snake_case</code>（ローカル変数）、<code>@instance_var</code>、<code>CONSTANT</code>',
+      '主要な型: <code>Integer</code>, <code>String</code>, <code>Symbol</code>, <code>Float</code>, <code>Boolean</code>',
+      '型変換: <code>to_i</code>（整数へ）, <code>to_s</code>（文字列へ）, <code>to_f</code>（小数へ）',
+      '比較演算子: <code>==</code>, <code>></code>, <code><</code>, <code>>=</code>, <code><=</code>, <code>!=</code>',
+      '論理演算子: <code>&&</code>（かつ）, <code>||</code>（または）, <code>!</code>（否定）',
+      '文字列展開: <code>"名前は#{name}です"</code> — ダブルクォートの中で変数を埋め込み'
+    ],
+    aiTip: '型変換で迷ったら「RubyでStringをIntegerに変換する方法」と聞いてみよう。to_i の注意点（"abc".to_i は 0 になる）も教えてくれる。'
+  },
+  {
+    id: 3, title: '条件分岐と繰り返し',
+    essence: '"もしAならBする" — プログラムの交通整理',
+    essenceDetail: '条件分岐はプログラムの「もし〜なら」を実現する仕組み。繰り返しは「同じ処理を何度も」実現する仕組み。この2つでプログラムの流れを制御します。',
+    points: [
+      '<code>if / elsif / else / end</code> — 基本の条件分岐。上から順に評価',
+      '<code>unless</code> — ifの逆。「〜でなければ」を表現（elsifは使えない）',
+      '<code>case / when</code> — 値のパターンマッチ。多分岐に便利',
+      'FizzBuzz — 条件の順序が重要。15の倍数→5の倍数→3の倍数の順',
+      '<code>while</code> — 条件が真の間繰り返す（無限ループ注意）',
+      '<code>times</code> — <code>5.times { |i| puts i }</code> 指定回数繰り返し',
+      '<code>each</code> — コレクションの各要素に処理。Rubyで最も使う繰り返し',
+      '<code>each_with_index</code> — 要素と一緒にインデックスも取得'
+    ],
+    aiTip: 'FizzBuzzの条件順序を間違えやすい。「FizzBuzzをRubyで書いて、なぜ15の判定が先か説明して」と聞いてみよう。'
+  },
+  {
+    id: 4, title: '配列（Array）',
+    essence: '番号付きロッカーのようなデータの並び（0番から始まる）',
+    essenceDetail: '配列はデータを順番に並べて管理する基本構造。ロッカーのように0番から番号が振られ、番号（インデックス）でアクセスします。',
+    points: [
+      '<code>[]</code> で配列を作成。<code>[1, "hello", true]</code> のように異なる型もOK',
+      '0始まり（0-indexed）— 最初の要素は <code>arr[0]</code>',
+      '負のインデックス — <code>arr[-1]</code> は最後の要素',
+      '<code>push</code> / <code><<</code> — 末尾に追加',
+      '<code>unshift</code> — 先頭に追加',
+      '<code>pop</code> — 末尾を削除して返す、<code>shift</code> — 先頭を削除して返す',
+      '<code>delete(値)</code> — 値を指定して削除、<code>delete_at(位置)</code> — 位置を指定して削除',
+      '破壊的メソッド（<code>!</code>付き）vs 非破壊的メソッド — 元の配列を変えるか変えないか'
+    ],
+    aiTip: '配列操作で「元の配列が変わってしまった」というバグが多い。「Rubyの破壊的メソッドと非破壊的メソッドの違い」を聞いてみよう。'
+  },
+  {
+    id: 5, title: '配列メソッド',
+    essence: '操作のパターン — 並べ替え・変換・絞り込み・結合',
+    essenceDetail: '配列メソッドは「データの集まりに対してどんな操作をしたいか」のパターン集。sort（並べ替え）、map（変換）、select（絞り込み）を使い分けることが重要。',
+    points: [
+      '<code>sort</code> — 並べ替え。比較可能な要素同士のみ（数値と文字列の混在はNG）',
+      '<code>map</code> — 全要素を変換。要素数は変わらない。<code>[1,2,3].map { |n| n * 2 }</code> → <code>[2,4,6]</code>',
+      '<code>select</code> — 条件に合う要素だけ抽出。要素数が減る可能性あり',
+      '<code>reject</code> — selectの逆。条件に合わない要素を抽出',
+      '<code>find</code> — 条件に合う最初の1つだけ返す',
+      '<code>uniq</code> — 重複を除去',
+      '<code>join</code> — 配列を文字列に結合。<code>["a","b"].join("-")</code> → <code>"a-b"</code>',
+      'メソッドチェーン — <code>arr.select{...}.map{...}.sort</code> のように連結可能'
+    ],
+    aiTip: 'map と each の違いで迷ったら聞いてみよう。mapは「新しい配列を返す」、eachは「戻り値を使わず繰り返す」のが違い。'
+  },
+  {
+    id: 6, title: 'ハッシュ',
+    essence: '"名前"でデータにアクセスする辞書型データ構造',
+    essenceDetail: '配列が「番号でアクセス」するのに対し、ハッシュは「名前（キー）でアクセス」します。実世界の辞書のように、見出し語から中身を引く構造です。',
+    points: [
+      '<code>{key: value}</code> の形式で定義。<code>{name: "Ruby", year: 1995}</code>',
+      'シンボルキー <code>:name</code> vs 文字列キー <code>"name"</code> — シンボルの方がメモリ効率が良い',
+      '<code>each</code> — <code>hash.each { |key, value| ... }</code> でキーと値を取得',
+      '<code>merge</code> — ハッシュの結合（同じキーは後勝ち）',
+      '<code>keys</code> — 全キーの配列、<code>values</code> — 全値の配列',
+      '配列 vs ハッシュの使い分け — 順序が重要なら配列、ラベル付きデータならハッシュ'
+    ],
+    aiTip: '「Rubyでシンボルと文字列の違いは？」と聞いてみよう。シンボルはイミュータブルで同一オブジェクト、文字列は毎回新しいオブジェクトが作られる。'
+  },
+  {
+    id: 7, title: 'メソッド',
+    essence: '処理に名前をつけて再利用する。電卓のM+ボタンのようなもの。',
+    essenceDetail: 'メソッドは「よく使う処理をまとめて名前をつけたもの」。一度定義すれば何度でも呼び出せます。プログラムを整理し、読みやすくする基本単位。',
+    points: [
+      '<code>def メソッド名 ... end</code> で定義',
+      '戻り値 — 最後に評価された式が自動的に戻り値になる（<code>return</code> は省略可）',
+      '引数 — メソッドに渡すデータ。<code>def greet(name) ... end</code>',
+      'デフォルト引数 — <code>def greet(name = "World") ... end</code>',
+      'キーワード引数 — <code>def greet(name:, age:) ... end</code> 呼ぶ側で名前を指定',
+      '<code>puts</code>（画面表示）と戻り値（プログラムで使う値）の違いを理解すること'
+    ],
+    aiTip: '「putsの戻り値はnil」ということを覚えておこう。メソッドの最後にputsを書くと戻り値がnilになるバグが起きやすい。'
+  },
+  {
+    id: 8, title: 'クラス',
+    essence: '"データ"と"操作"をセットにした設計図。現実のモノをコードで表現。',
+    essenceDetail: 'クラスはオブジェクト指向の核心。「データ（属性）」と「操作（メソッド）」をひとまとめにした設計図です。Userクラスなら、name属性とgreetメソッドをセットにできます。',
+    points: [
+      '<code>class クラス名 ... end</code> で定義。クラス名はCamelCase',
+      '<code>initialize</code> — コンストラクタ。<code>User.new</code> 時に自動実行',
+      '<code>@インスタンス変数</code> — そのオブジェクト固有のデータを保持',
+      '<code>attr_accessor</code> — 読み書き両方、<code>attr_reader</code> — 読み取り専用、<code>attr_writer</code> — 書き込み専用',
+      '継承 — <code>class Child < Parent</code> で親クラスの機能を引き継ぐ',
+      '<code>super</code> — 親クラスの同名メソッドを呼び出す'
+    ],
+    aiTip: '「attr_accessor と attr_reader はどう使い分ける？」と聞いてみよう。外部から変更されたくないデータには attr_reader を使う。'
+  },
+  {
+    id: 9, title: 'モジュール',
+    essence: '共通機能のパック。設計図ではなく、追加機能として使う。',
+    essenceDetail: 'モジュールはクラスのようにメソッドを定義できますが、インスタンスは作れません。複数のクラスに共通機能を追加する「ミックスイン」として使うのが主な用途。',
+    points: [
+      '<code>module モジュール名 ... end</code> で定義',
+      '<code>include</code> — モジュールのメソッドをインスタンスメソッドとして追加',
+      '<code>extend</code> — モジュールのメソッドをクラスメソッドとして追加',
+      'ミックスイン — Rubyは単一継承だが、モジュールで多重継承的なことを実現',
+      '名前空間 — <code>Module::Class</code> で名前の衝突を回避'
+    ],
+    aiTip: '「include と extend の違い」はよく聞かれるポイント。実際にコードを書いて試すのが一番わかりやすい。'
+  },
+  {
+    id: 10, title: '実際にアプリを作ってみよう',
+    essence: 'JSONパース、API通信 — 外の世界とつながる',
+    essenceDetail: '実際のアプリ開発では、外部APIからデータを取得してパースする場面が多い。JSONという形式でデータをやり取りし、Net::HTTPでHTTP通信を行います。',
+    points: [
+      '<code>require \'json\'</code> — JSON ライブラリの読み込み',
+      '<code>JSON.parse(文字列)</code> — JSON文字列をRubyのハッシュ/配列に変換',
+      '<code>Net::HTTP.get(uri)</code> — GETリクエストでデータを取得',
+      '<code>URI.parse(url文字列)</code> — URL文字列をURIオブジェクトに変換'
+    ],
+    aiTip: 'APIのレスポンスが複雑なJSONの場合、「このJSONをRubyでパースして特定のキーを取得するコード」と聞くと良い。'
+  },
+  {
+    id: 11, title: 'Rubyの理解をより深めよう',
+    essence: '例外処理、クラス設計の実践、文字列検索',
+    essenceDetail: '実践的なRubyプログラミングに欠かせない例外処理と、これまで学んだクラスやキーワード引数の復習。エラーが起きても安全にプログラムを動かし続ける方法を学びます。',
+    points: [
+      '<code>begin / rescue / end</code> — 例外処理。エラーが起きても処理を継続',
+      '<code>raise</code> — 意図的に例外を発生させる',
+      '<code>include?</code> — 文字列や配列に特定の要素が含まれるか判定',
+      'キーワード引数の復習 — 実践的なメソッド定義で使いこなす',
+      '<code>attr_accessor</code> vs <code>attr_reader</code> の使い分けの復習'
+    ],
+    aiTip: '「begin/rescue でどんな例外をキャッチすべき？」と聞いてみよう。rescueは具体的な例外クラスを指定するのがベストプラクティス。'
+  }
+];
+
+// ===== QUIZ DATA =====
+const quizzes = [
+  { ch:1, q:'Dockerの主な目的として最も適切なのは？', choices:['プログラムを高速化する','全員同じ環境で開発できるようにする','ファイルを暗号化する','データベースを作成する','プログラミング言語を学ぶ'], answer:1, explanation:'Dockerは開発環境の差異をなくし、「どのPCでも同じ環境で動く」ことを実現します。' },
+  { ch:1, q:'<code>puts</code> と <code>p</code> の違いとして正しいのは？', choices:['違いはない','putsは改行なし、pは改行あり','putsは文字列として表示、pはデバッグ用に型情報付きで表示','pの方が処理が速い','putsはエラー時のみ使う'], answer:2, explanation:'putsは to_s した結果を表示、pは inspect した結果を表示します。p "hello" → "hello"（引用符付き）、puts "hello" → hello' },
+  { ch:1, q:'Rubyをインタラクティブに実行するコマンドは？', choices:['ruby -e','irb','ruby run','ruby -i','ruby console'], answer:1, explanation:'irb（Interactive Ruby）は対話的にRubyコードを試せるツールです。1行ずつ入力して結果を確認できます。' },
+  { ch:2, q:'次のコードの出力は？<pre>"7" + "3"</pre>', choices:['"73"','10','"10"','エラーになる','73'], answer:0, explanation:'文字列同士の + は結合（concatenation）です。"7" + "3" は文字列を繋げて "73" になります。' },
+  { ch:2, q:'Rubyの文字列展開（interpolation）として正しいのは？', choices:["'Hello #{name}'",'"Hello #{name}"','"Hello ${name}"','"Hello $(name)"','"Hello {name}"'], answer:1, explanation:'文字列展開は #{} をダブルクォート内で使います。シングルクォートでは展開されません。' },
+  { ch:2, q:'<code>"abc".to_i</code> の結果は？', choices:['エラーになる','nil','"abc"','0','false'], answer:3, explanation:'数値に変換できない文字列に to_i を使うと、エラーではなく 0 が返ります。"123abc".to_i は 123 になります。' },
+  { ch:3, q:'FizzBuzzで最初に判定すべき条件は？', choices:['3の倍数','5の倍数','15の倍数','1の倍数','偶数'], answer:2, explanation:'15の倍数（3と5の両方の倍数）を先に判定しないと、3の倍数や5の倍数の条件に先にマッチしてしまいます。' },
+  { ch:3, q:'<code>unless</code> の説明として正しいのは？', choices:['ifと同じ','ifの逆（条件がfalseのとき実行）','繰り返し処理','例外処理','メソッド定義'], answer:1, explanation:'unless は if の逆で、条件が偽（false/nil）のときにブロックを実行します。ただし elsif は使えません。' },
+  { ch:3, q:'次のコードの出力は？<pre>3.times { |i| print i }</pre>', choices:['123','012','321','1 2 3','0 1 2'], answer:1, explanation:'times のブロック変数は 0 から始まります。print は改行なしなので 012 と表示されます。' },
+  { ch:4, q:'<code>arr = [10, 20, 30]</code> のとき、<code>arr[-1]</code> の値は？', choices:['10','20','30','nil','エラー'], answer:2, explanation:'負のインデックスは末尾からの位置を表します。-1 は最後の要素なので 30 です。' },
+  { ch:4, q:'配列の末尾に要素を追加するメソッドとして正しいのは？（2つの方法）', choices:['push / <<','add / append','insert / put','push / unshift','<< / prepend'], answer:0, explanation:'push と << は配列の末尾に要素を追加します。unshift は先頭への追加です。' },
+  { ch:4, q:'破壊的メソッドの特徴として正しいのは？', choices:['新しい配列を返す','元の配列を変更する','エラーが発生しやすい','処理が遅い','メソッド名が長い'], answer:1, explanation:'破壊的メソッド（通常 ! 付き）はレシーバ自体を変更します。sort! は元の配列を並べ替え、sort は新しい配列を返します。' },
+  { ch:5, q:'<code>[1, 2, 3].map { |n| n * 2 }</code> の結果は？', choices:['[2, 4, 6]','[1, 2, 3]','6','[1, 4, 9]','12'], answer:0, explanation:'map は各要素にブロックの処理を適用し、結果を新しい配列として返します。各要素を2倍にするので [2, 4, 6]。' },
+  { ch:5, q:'<code>select</code> と <code>map</code> の違いとして正しいのは？', choices:['同じ動作をする','selectは絞り込み（要素数が減る可能性）、mapは変換（要素数は同じ）','selectは変換、mapは絞り込み','selectは破壊的、mapは非破壊的','selectは文字列用、mapは数値用'], answer:1, explanation:'select は条件に合う要素だけを抽出（フィルタ）、map は全要素を変換して新しい配列を返します。' },
+  { ch:5, q:'<code>["a", "b", "c"].join("-")</code> の結果は？', choices:['"a-b-c"','["a-", "b-", "c-"]','"abc"','"a, b, c"','"-a-b-c-"'], answer:0, explanation:'join は配列の要素を引数の文字列で結合して1つの文字列にします。' },
+  { ch:6, q:'ハッシュでシンボルキーを使う利点は？', choices:['コードが短くなるだけ','メモリ効率が良い（同じシンボルは同一オブジェクト）','処理速度が10倍になる','文字列キーは使えない','特に利点はない'], answer:1, explanation:'シンボルはイミュータブルで、同じ名前のシンボルは常に同一オブジェクトを参照します。これによりメモリ効率とハッシュの検索速度が向上します。' },
+  { ch:6, q:'次のコードの出力は？<pre>h = {a: 1, b: 2}\nputs h[:c]</pre>', choices:['0','nil','エラーになる','false','""'], answer:1, explanation:'存在しないキーにアクセスすると nil が返ります（エラーにはなりません）。puts nil は空行を表示します。' },
+  { ch:6, q:'配列とハッシュの使い分けとして正しいのは？', choices:['配列の方が常に良い','順序が重要なら配列、ラベル付きデータならハッシュ','ハッシュの方が常に速い','配列は数値のみ、ハッシュは文字列のみ','違いはない'], answer:1, explanation:'配列は順序付きのリスト（ランキング等）、ハッシュは名前付きデータ（ユーザー情報等）に適しています。' },
+  { ch:7, q:'Rubyのメソッドの戻り値について正しいのは？', choices:['必ず return を書く必要がある','最後に評価された式が自動的に戻り値になる','戻り値は常にnil','メソッドは値を返せない','return は使えない'], answer:1, explanation:'Rubyでは return を省略でき、メソッド内で最後に評価された式の値が自動的に戻り値になります。' },
+  { ch:7, q:'次のメソッドの戻り値は？<pre>def test\n  puts "hello"\nend</pre>', choices:['"hello"','true','nil','0','"test"'], answer:2, explanation:'puts は画面に表示した後 nil を返します。メソッドの最後の式が puts なので、戻り値は nil です。' },
+  { ch:7, q:'キーワード引数の呼び出し方として正しいのは？<pre>def greet(name:, age:)\n  "#{name}(#{age}歳)"\nend</pre>', choices:['greet("太郎", 20)','greet(name: "太郎", age: 20)','greet("太郎", "20")','greet(太郎, 20)','greet[:name, :age]'], answer:1, explanation:'キーワード引数は呼び出し時にキー名を指定して渡します。順番は自由ですが、キー名は必須です。' },
+  { ch:8, q:'<code>attr_reader :name</code> で定義されるのは？', choices:['name を読み書きできる','name を読み取り専用でアクセスできる','name を書き込み専用でアクセスできる','name メソッドを削除する','name を定数にする'], answer:1, explanation:'attr_reader は読み取り用のゲッターメソッドのみを定義します。外部から値の変更はできません。' },
+  { ch:8, q:'<code>super</code> の役割は？', choices:['クラスを削除する','親クラスの同名メソッドを呼び出す','インスタンスを破棄する','メソッドをオーバーライドする','新しいクラスを作る'], answer:1, explanation:'super は継承元（親クラス）の同名メソッドを呼び出します。initialize 内で super を使うと親の初期化処理も実行できます。' },
+  { ch:8, q:'次のコードでエラーになるのは？<pre>class User\n  attr_reader :name\n  def initialize(name)\n    @name = name\n  end\nend\nuser = User.new("太郎")</pre>', choices:['user.name','user.name = "花子"','User.new("次郎")','puts user.name','user.name.length'], answer:1, explanation:'attr_reader は読み取り専用なので、user.name = "花子" はセッターが定義されておらずエラーになります。' },
+  { ch:9, q:'<code>include</code> と <code>extend</code> の違いは？', choices:['同じ動作','include はインスタンスメソッド追加、extend はクラスメソッド追加','include はクラスメソッド、extend はインスタンスメソッド','include は継承、extend はミックスイン','違いはない'], answer:1, explanation:'include はモジュールのメソッドをインスタンスメソッドとして、extend はクラスメソッドとして追加します。' },
+  { ch:9, q:'Rubyが単一継承を採用している理由と、その補完方法は？', choices:['多重継承のダイヤモンド問題を避けるため、モジュールで補完','単一継承の方が速いため、extend で補完','特に理由はない','メモリ節約のため','Rubyは多重継承をサポートしている'], answer:0, explanation:'多重継承は「ダイヤモンド問題」（同名メソッドの衝突）を引き起こすため、Rubyは単一継承+モジュールのミックスインで安全に機能を追加します。' },
+  { ch:10, q:'<code>JSON.parse(\'{"name":"Ruby"}\')</code> の結果は？', choices:['文字列 {"name":"Ruby"}','ハッシュ {"name"=>"Ruby"}','シンボルキーのハッシュ {name: "Ruby"}','配列 ["name", "Ruby"]','nil'], answer:1, explanation:'JSON.parse は JSON 文字列を Ruby のオブジェクトに変換します。JSON のキーは文字列なので、文字列キーのハッシュになります。' },
+  { ch:10, q:'外部APIからデータを取得する正しい順序は？', choices:['JSON.parse → URI.parse → Net::HTTP.get','URI.parse → Net::HTTP.get → JSON.parse','Net::HTTP.get → URI.parse → JSON.parse','require → puts → gets','HTTP.get → parse → display'], answer:1, explanation:'まず URI.parse でURL文字列をURIオブジェクトに変換し、Net::HTTP.get で通信し、JSON.parse で結果をパースします。' },
+  { ch:11, q:'例外処理の基本構文として正しいのは？', choices:['try / catch / end','begin / rescue / end','error / handle / end','if / rescue / end','do / rescue / end'], answer:1, explanation:'Rubyの例外処理は begin / rescue / end です（try/catchは他言語の構文）。rescue で捕捉する例外クラスを指定できます。' },
+  { ch:11, q:'<code>"Hello World".include?("World")</code> の結果は？', choices:['true','false','"World"','nil','エラー'], answer:0, explanation:'include? は文字列（や配列）に指定した要素が含まれているかを判定し、true/false を返します。' }
+];
+
+// ===== STATE =====
+let currentTab = 'home';
+let quizState = { started: false, current: 0, answers: [], shuffledQuizzes: [] };
+
+// ===== LOCAL STORAGE HELPERS =====
+function lsGet(key, def) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; } }
+function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
+
+function getReadStatus() { return lsGet('ruby_read', {}); }
+function setReadStatus(chId, val) { const s = getReadStatus(); s[chId] = val; lsSet('ruby_read', s); }
+function getMemo(chId) { return lsGet('ruby_memo_' + chId, ''); }
+function setMemo(chId, val) { lsSet('ruby_memo_' + chId, val); }
+function getQuizProgress() { return lsGet('ruby_quiz', null); }
+function setQuizProgress(val) { lsSet('ruby_quiz', val); }
+
+// ===== TAB NAVIGATION =====
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + tab).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  if (tab === 'quiz') renderQuiz();
+  if (tab === 'memo') renderMemoList();
+  if (tab === 'home') renderChapterList();
+}
+
+// ===== CHAPTER LIST =====
+function renderChapterList() {
+  const readStatus = getReadStatus();
+  const el = document.getElementById('chapter-list');
+  el.innerHTML = chapters.map(ch => `
+    <div class="chapter-card" onclick="openChapter(${ch.id})">
+      <div class="ch-num">Chapter ${ch.id}</div>
+      <div class="ch-title">${ch.title}</div>
+      <div class="ch-essence">${ch.essence}</div>
+      <div class="ch-progress ${readStatus[ch.id] ? 'done' : ''}"></div>
+    </div>
+  `).join('');
+}
+
+// ===== CHAPTER DETAIL =====
+function openChapter(id) {
+  const ch = chapters.find(c => c.id === id);
+  if (!ch) return;
+  const readStatus = getReadStatus();
+  const memo = getMemo(id);
+  const isRead = readStatus[id];
+
+  const overlay = document.getElementById('detail-overlay');
+  const content = document.getElementById('detail-content');
+  content.innerHTML = `
+    <button class="detail-back" onclick="closeDetail()">‹ 戻る</button>
+    <div class="detail-ch-num">CHAPTER ${ch.id}</div>
+    <div class="detail-title">${ch.title}</div>
+
+    <div class="detail-section">
+      <h3>インフォグラフィック</h3>
+      <div class="content-card" style="padding:8px;cursor:pointer" onclick="openZoom('img/ch${String(ch.id).padStart(2,'0')}.png')">
+        <img src="img/ch${String(ch.id).padStart(2,'0')}.png" alt="第${ch.id}章 インフォグラフィック" style="width:100%;border-radius:8px;display:block" loading="lazy">
+        <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:6px">タップで拡大</p>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <h3>本質</h3>
+      <div class="content-card">
+        <p style="font-size:16px;color:var(--text);font-weight:600;margin-bottom:10px">${ch.essence}</p>
+        <p>${ch.essenceDetail}</p>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <h3>ポイント</h3>
+      <div class="content-card">
+        <ul class="key-list">
+          ${ch.points.map(p => `<li>${p}</li>`).join('')}
+        </ul>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <h3>AI活用ヒント</h3>
+      <div class="content-card">
+        <p>💡 ${ch.aiTip}</p>
+      </div>
+    </div>
+
+    <div class="detail-section memo-area">
+      <h3>メモ</h3>
+      <label>この章で気づいたことを書き留めよう</label>
+      <textarea id="memo-input" placeholder="ここにメモを入力...">${memo}</textarea>
+      <div class="memo-saved" id="memo-saved">保存しました</div>
+    </div>
+
+    <button class="detail-read-btn ${isRead ? 'read' : ''}" onclick="toggleRead(${ch.id})">
+      ${isRead ? '✓ 読了済み' : 'この章を読了にする'}
+    </button>
+  `;
+
+  overlay.classList.add('open');
+  overlay.scrollTop = 0;
+
+  // memo auto-save
+  const memoInput = document.getElementById('memo-input');
+  let saveTimer;
+  memoInput.addEventListener('input', () => {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      setMemo(id, memoInput.value);
+      const saved = document.getElementById('memo-saved');
+      saved.classList.add('show');
+      setTimeout(() => saved.classList.remove('show'), 1500);
+    }, 500);
+  });
+}
+
+function closeDetail() {
+  document.getElementById('detail-overlay').classList.remove('open');
+  renderChapterList();
+}
+
+function toggleRead(chId) {
+  const readStatus = getReadStatus();
+  readStatus[chId] = !readStatus[chId];
+  lsSet('ruby_read', readStatus);
+  openChapter(chId);
+}
+
+// ===== QUIZ =====
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function renderQuiz() {
+  const container = document.getElementById('quiz-container');
+  const saved = getQuizProgress();
+
+  if (!quizState.started) {
+    const readStatus = getReadStatus();
+    const readCount = Object.values(readStatus).filter(Boolean).length;
+    container.innerHTML = `
+      <div class="page-header">クイズ<small>全30問・約5分</small></div>
+      <div class="quiz-start-card">
+        <h2>Ruby理解度チェック</h2>
+        <p>全11章から30問出題。<br>理解度を確認しましょう！</p>
+        <button class="quiz-start-btn" onclick="startQuiz()">クイズを始める</button>
+      </div>
+      <div class="content-card" style="margin-top:12px">
+        <p style="color:var(--text2);font-size:14px">📖 読了: ${readCount} / 11 章</p>
+        ${saved ? `<p style="color:var(--text2);font-size:14px;margin-top:8px">前回のスコア: ${saved.score} / ${saved.total}</p>` : ''}
+      </div>
+    `;
+    return;
+  }
+
+  const qs = quizState.shuffledQuizzes;
+  const idx = quizState.current;
+
+  // Result
+  if (idx >= qs.length) {
+    const correct = quizState.answers.filter((a, i) => a === qs[i].answer).length;
+    const total = qs.length;
+    const pct = Math.round(correct / total * 100);
+    let msg = pct >= 80 ? '素晴らしい！よく理解しています！' : pct >= 60 ? 'いい感じ！もう少しで完璧です。' : 'もう一度復習してみましょう！';
+
+    // Chapter scores
+    const chScores = {};
+    qs.forEach((q, i) => {
+      if (!chScores[q.ch]) chScores[q.ch] = { correct: 0, total: 0 };
+      chScores[q.ch].total++;
+      if (quizState.answers[i] === q.answer) chScores[q.ch].correct++;
+    });
+
+    setQuizProgress({ score: correct, total, pct, chScores, date: new Date().toISOString() });
+
+    container.innerHTML = `
+      <div class="page-header">結果</div>
+      <div class="quiz-result">
+        <div class="score-circle" style="border-color:${pct>=80?'var(--green)':pct>=60?'var(--orange)':'var(--ruby)'}">
+          <div class="score-num">${pct}%</div>
+          <div class="score-label">${correct}/${total}</div>
+        </div>
+        <div class="score-msg">${msg}</div>
+        <div class="score-sub">正答率 ${pct}%</div>
+        <div class="quiz-chapter-scores">
+          <h3 style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--text2)">章別スコア</h3>
+          ${Object.entries(chScores).sort((a,b)=>a[0]-b[0]).map(([ch, s]) => {
+            const c = chapters.find(c=>c.id==ch);
+            return `<div class="ch-score-row"><span>Ch.${ch} ${c?c.title:''}</span><span style="font-weight:700;color:${s.correct===s.total?'var(--green)':'var(--text)'}">${s.correct}/${s.total}</span></div>`;
+          }).join('')}
+        </div>
+        <button class="quiz-next-btn" style="margin-top:24px" onclick="startQuiz()">もう一度挑戦</button>
+        <button class="quiz-next-btn" style="margin-top:10px;background:var(--bg3)" onclick="quizState.started=false;renderQuiz()">戻る</button>
+      </div>
+    `;
+    return;
+  }
+
+  const quiz = qs[idx];
+  const answered = quizState.answers[idx] !== undefined;
+
+  container.innerHTML = `
+    <div class="quiz-progress-bar"><div class="quiz-progress-fill" style="width:${(idx/qs.length)*100}%"></div></div>
+    <div class="quiz-counter">問題 ${idx + 1} / ${qs.length}　（Ch.${quiz.ch}）</div>
+    <div class="quiz-question">${quiz.q}</div>
+    <div class="quiz-choices">
+      ${quiz.choices.map((c, i) => {
+        let cls = 'quiz-choice';
+        if (answered) {
+          if (i === quiz.answer) cls += ' correct';
+          else if (i === quizState.answers[idx] && i !== quiz.answer) cls += ' wrong';
+        }
+        return `<button class="${cls}" ${answered ? 'disabled' : `onclick="answerQuiz(${i})"`}>${c}</button>`;
+      }).join('')}
+    </div>
+    ${answered ? `<div class="quiz-explanation">${quiz.explanation}</div><button class="quiz-next-btn" onclick="nextQuiz()">次へ</button>` : ''}
+  `;
+}
+
+function startQuiz() {
+  quizState = { started: true, current: 0, answers: [], shuffledQuizzes: shuffleArray(quizzes) };
+  renderQuiz();
+}
+
+function answerQuiz(idx) {
+  quizState.answers[quizState.current] = idx;
+  renderQuiz();
+}
+
+function nextQuiz() {
+  quizState.current++;
+  renderQuiz();
+  document.getElementById('page-quiz').scrollTop = 0;
+}
+
+// ===== MEMO LIST =====
+function renderMemoList() {
+  const el = document.getElementById('memo-list');
+  const memos = chapters.map(ch => ({ ch, memo: getMemo(ch.id) })).filter(m => m.memo.trim());
+
+  if (memos.length === 0) {
+    el.innerHTML = '<div class="memo-empty">まだメモがありません。<br>各章の詳細ページからメモを追加できます。</div>';
+    return;
+  }
+
+  el.innerHTML = memos.map(m => `
+    <div class="memo-card" onclick="openChapter(${m.ch.id})">
+      <div class="memo-ch">Chapter ${m.ch.id}</div>
+      <div class="memo-title">${m.ch.title}</div>
+      <div class="memo-text">${escapeHtml(m.memo)}</div>
+    </div>
+  `).join('');
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ===== IMAGE ZOOM =====
+function openZoom(src) {
+  const modal = document.getElementById('img-zoom-modal');
+  document.getElementById('img-zoom-target').src = src;
+  modal.classList.add('show');
+}
+function closeImgZoom() {
+  document.getElementById('img-zoom-modal').classList.remove('show');
+}
+
+document.addEventListener('click', e => {
+  if (e.target.tagName === 'IMG' && e.target.closest('.content-card')) {
+    const modal = document.getElementById('img-zoom-modal');
+    document.getElementById('img-zoom-target').src = e.target.src;
+    modal.classList.add('show');
+  }
+});
+
+// ===== SERVICE WORKER =====
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ===== INIT =====
+renderChapterList();
+</script>
+</body>
+</html>
